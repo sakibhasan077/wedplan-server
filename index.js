@@ -23,10 +23,23 @@ export async function connectToMongoDB() {
 }
 
 const connectedClient = await connectToMongoDB();
+const db = connectedClient.db("wedplan");
+const servicesCollection = db.collection("services");
 
 app.get('/', (req, res) => {
   res.send({status: "success", message: "wedplan api is running"});
 });
+
+// Services API
+app.post('/services', async (req, res) =>{
+  const service = req.body;
+  const serviceData = {
+    status: "pending",
+    ...service
+  }
+  const result = await servicesCollection.insertOne(serviceData);
+  res.send(result);
+}) 
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
