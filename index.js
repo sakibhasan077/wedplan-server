@@ -43,8 +43,18 @@ app.post('/services', async (req, res) =>{
   res.send(result);
 }) 
 
+// Get Service Data by id
+app.get("/services/:id",async(req,res)=>{
+   const { id } = req.params;
+  const result = await servicesCollection.findOne({
+    _id: new ObjectId(id)
+  });
+
+  res.send(result);
+})
+
 // Get services by vendor id
-app.get('/services/:vendorId', async (req, res) => {
+app.get('/services/vendor/:vendorId', async (req, res) => {
   const{vendorId} = req.params;
   const result = await servicesCollection.find({vendorId}).toArray();
   res.send(result);
@@ -54,8 +64,6 @@ app.get('/services/:vendorId', async (req, res) => {
 app.patch('/services/:id', async (req, res) => {
   const {id} = req.params;
   const updateData = req.body;
-  console.log(updateData);
-  console.log(id);
   const result = await servicesCollection.updateOne({_id: new ObjectId(id)}, {$set: updateData});
   res.send(result);
 })
