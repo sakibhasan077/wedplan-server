@@ -25,6 +25,7 @@ export async function connectToMongoDB() {
 const connectedClient = await connectToMongoDB();
 const db = connectedClient.db("wedplan");
 const servicesCollection = db.collection("services");
+const userCollection = db.collection("user");
 
 app.get('/', (req, res) => {
   res.send({status: "success", message: "wedplan api is running"});
@@ -77,3 +78,20 @@ app.delete('/services/:id',async(req,res)=>{
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+
+// User Collection 
+
+app.get("/users",async(req,res)=>{
+  const query =  {}
+  if(req.query.role){
+    query.role = req.query.role;
+  }
+  if(req.query.search){
+    query.$or = [
+      {name: {$regex: req.query.search, $options: "i"}},
+      {email: {$regex: req.query.search, $options: "i"}}
+    ]
+  }
+  const result = await userCollection.find(query).toArray();
+  res.send(result)
+})
