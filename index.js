@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from "cors"
 import 'dotenv/config'
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 
 const app = express();
 const port = process.env.port || 5000;
@@ -47,6 +47,16 @@ app.post('/services', async (req, res) =>{
 app.get('/services/:vendorId', async (req, res) => {
   const{vendorId} = req.params;
   const result = await servicesCollection.find({vendorId}).toArray();
+  res.send(result);
+})
+
+//Update service status
+app.patch('/services/:id', async (req, res) => {
+  const {id} = req.params;
+  const updateData = req.body;
+  console.log(updateData);
+  console.log(id);
+  const result = await servicesCollection.updateOne({_id: new ObjectId(id)}, {$set: updateData});
   res.send(result);
 })
 app.listen(port, () => {
