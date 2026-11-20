@@ -95,3 +95,11 @@ app.get("/users",async(req,res)=>{
   const result = await userCollection.find(query).toArray();
   res.send(result)
 })
+
+// update user IsBlocked status
+app.patch('/users/:id', async (req, res) => {
+  const {id} = req.params;
+  const updateData = req.body;
+  const result = await userCollection.updateOne({_id: new ObjectId(id)}, {$set: updateData});
+  res.send(result); 
+})
