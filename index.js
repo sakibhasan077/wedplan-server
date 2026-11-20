@@ -31,16 +31,24 @@ app.get('/', (req, res) => {
 });
 
 // Services API
+// Post a new service
 app.post('/services', async (req, res) =>{
   const service = req.body;
   const serviceData = {
     status: "pending",
+    isActive: true,
     ...service
   }
   const result = await servicesCollection.insertOne(serviceData);
   res.send(result);
 }) 
 
+// Get services by vendor id
+app.get('/services/:vendorId', async (req, res) => {
+  const{vendorId} = req.params;
+  const result = await servicesCollection.find({vendorId}).toArray();
+  res.send(result);
+})
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
