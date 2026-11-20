@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { application } from 'express';
 import cors from "cors"
 import 'dotenv/config'
 import { MongoClient, ObjectId } from 'mongodb';
@@ -67,6 +67,13 @@ app.patch('/services/:id', async (req, res) => {
   const result = await servicesCollection.updateOne({_id: new ObjectId(id)}, {$set: updateData});
   res.send(result);
 })
+
+app.delete('/services/:id',async(req,res)=>{
+  const {id} = req.params;
+  const result = await servicesCollection.deleteOne({_id: new ObjectId(id)})
+  res.send(result)
+})
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
