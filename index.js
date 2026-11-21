@@ -69,6 +69,16 @@ app.post('/services', async (req, res) =>{
   res.send(result);
 }) 
 
+// service count 
+app.get('/services/count', async (req, res) => {
+  const query = {};
+  if(req.query.vendorId){
+    query.vendorId = req.query.vendorId;
+  }
+  const count = await servicesCollection.countDocuments(query);
+  res.send({count: count});
+});
+
 // Get Service Data by id
 app.get("/services/:id",async(req,res)=>{
    const { id } = req.params;
