@@ -132,6 +132,14 @@ app.get("/users",async(req,res)=>{
   res.send(result)
 })
 
+// update user profile
+app.patch('/users/profile/:id', async (req, res) => {
+  const {id} = req.params;
+  const updateData = req.body;
+  const result = await userCollection.updateOne({_id: new ObjectId(id)}, {$set: updateData});
+  res.send(result); 
+})
+
 // update user IsBlocked status
 app.patch('/users/:id', async (req, res) => {
   const {id} = req.params;
