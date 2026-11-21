@@ -32,6 +32,31 @@ app.get('/', (req, res) => {
 });
 
 // Services API
+//get all service data for admin 
+app.get('/admin/services', async (req, res) => {
+  const query = {};
+  if(req.query.status){
+    query.status = req.query.status;
+  }
+  if(req.query.category){
+    query.category = req.query.category;
+  }
+
+  if(req.query.search){
+    query.$or = [
+      {serviceName: {$regex: req.query.search, $options: "i"}},
+      {description: {$regex: req.query.search, $options: "i"}},
+      {price: {$regex: req.query.search, $options: "i"}},
+      {location: {$regex: req.query.search, $options: "i"}},
+      {vendorName: {$regex: req.query.search, $options: "i"}},
+      {vendorEmail: {$regex: req.query.search, $options: "i"}},
+    ]
+  }
+
+
+  const result = await servicesCollection.find(query).sort({ createdAt: -1 }).toArray();
+  res.send(result);
+})
 // Post a new service
 app.post('/services', async (req, res) =>{
   const service = req.body;
