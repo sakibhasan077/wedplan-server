@@ -170,7 +170,8 @@ app.post('/payment/checkout', async (req, res) => {
       vendorEmail: metadata.vendorEmail,
       amount_total,
       createdAt: new Date(),
-      plan: "premium"
+      plan: "premium",
+      amount: amount_total/100,
     };
     const result = await paymentCollection.insertOne(paymentData);
     const updateUser = await userCollection.updateOne({_id: new ObjectId(metadata.vendorId)}, {$set: {subscriptionPlan: "premium"}});
@@ -179,6 +180,12 @@ app.post('/payment/checkout', async (req, res) => {
     res.status(400).send({ error: "Payment not completed or not paid" });
   }
 });
+
+// get all payments
+app.get('/payments/history', async (req, res) => {
+  const result = await paymentCollection.find({}).sort({ createdAt: -1 }).toArray();
+  res.send(result);
+})
 
 
 
