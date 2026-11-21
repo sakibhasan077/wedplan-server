@@ -1,4 +1,4 @@
-import express, { application } from 'express';
+import express from 'express';
 import cors from "cors"
 import 'dotenv/config'
 import { MongoClient, ObjectId } from 'mongodb';
@@ -192,3 +192,5 @@ app.get('/payments/history', async (req, res) => {
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+
+export default app;
