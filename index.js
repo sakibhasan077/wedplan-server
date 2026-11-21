@@ -82,7 +82,7 @@ app.get("/services/:id",async(req,res)=>{
 // Get services by vendor id
 app.get('/services/vendor/:vendorId', async (req, res) => {
   const{vendorId} = req.params;
-  const result = await servicesCollection.find({vendorId}).toArray();
+  const result = await servicesCollection.find({vendorId}).sort({ createdAt: -1 }).toArray();
   res.send(result);
 })
 
@@ -117,7 +117,7 @@ app.get("/users",async(req,res)=>{
       {email: {$regex: req.query.search, $options: "i"}}
     ]
   }
-  const result = await userCollection.find(query).toArray();
+  const result = await userCollection.find(query).sort({ createdAt: -1 }).toArray();
   res.send(result)
 })
 
