@@ -2,6 +2,11 @@ import express, { application } from 'express';
 import cors from "cors"
 import 'dotenv/config'
 import { MongoClient, ObjectId } from 'mongodb';
+import Stripe from 'stripe';
+
+// stripe 
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 const port = process.env.port || 5000;
@@ -26,6 +31,7 @@ const connectedClient = await connectToMongoDB();
 const db = connectedClient.db("wedplan");
 const servicesCollection = db.collection("services");
 const userCollection = db.collection("user");
+const paymentCollection = db.collection("payment");
 
 app.get('/', (req, res) => {
   res.send({status: "success", message: "wedplan api is running"});
@@ -109,11 +115,6 @@ app.delete('/services/:id',async(req,res)=>{
   const result = await servicesCollection.deleteOne({_id: new ObjectId(id)})
   res.send(result)
 })
-
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
-
 // User Collection 
 
 app.get("/users",async(req,res)=>{
@@ -138,3 +139,49 @@ app.patch('/users/:id', async (req, res) => {
   const result = await userCollection.updateOne({_id: new ObjectId(id)}, {$set: updateData});
   res.send(result); 
 })
+
+// Payment API
+app.post('/payment/checkout', async (req, res) => {
+  const {sessionId} = req.body;
+  if(!sessionId){
+    return res.status(400).send({ error: "Session ID is required" });
+  }
+  const existingPayment = await paymentCollection.findOne({stripeSessionId: sessionId});
+  if(existingPayment){
+    return res.status(400).send({ error: "Payment already processed for this session" });
+  }
+  const {
+    status,
+    payment_status,
+    payment_intent,
+    customer_email,
+    metadata,
+    amount_total,
+  } = await stripe.checkout.sessions.retrieve(sessionId);
+  if(status === 'complete' && payment_status === 'paid') {
+    const paymentData = {
+      stripeSessionId: sessionId,
+      status,
+      payment_status,
+      payment_intent,
+      customer_email,
+      vendorId: metadata.vendorId,
+      vendorName: metadata.vendorName,
+      vendorEmail: metadata.vendorEmail,
+      amount_total,
+      createdAt: new Date(),
+      plan: "premium"
+    };
+    const result = await paymentCollection.insertOne(paymentData);
+    const updateUser = await userCollection.updateOne({_id: new ObjectId(metadata.vendorId)}, {$set: {subscriptionPlan: "premium"}});
+    res.send({result, updateUser});
+  } else {
+    res.status(400).send({ error: "Payment not completed or not paid" });
+  }
+});
+
+
+
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
