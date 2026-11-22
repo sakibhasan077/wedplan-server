@@ -203,6 +203,13 @@ app.patch('/users/:id', async (req, res) => {
   res.send(result); 
 })
 
+// Get user by id
+app.get('/users/brows-details/:id', async (req, res) => {
+  const {id} = req.params;
+  const result = await userCollection.findOne({_id: new ObjectId(id)});
+  res.send(result);
+})
+
 // Payment API
 app.post('/payment/checkout', async (req, res) => {
   const {sessionId} = req.body;
