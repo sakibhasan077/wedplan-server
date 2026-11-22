@@ -75,6 +75,60 @@ app.post('/services', async (req, res) =>{
   res.send(result);
 }) 
 
+// get all services for browse services page
+app.get("/services/browse", async (req, res) => {
+  try {
+    const getQueryValue = (value) => Array.isArray(value) ? value[0] : value;
+    const normalize = (value) =>
+      typeof value === "string" ? value.trim() : undefined;
+    const sort = normalize(getQueryValue(req.query.sort));
+    const search = normalize(getQueryValue(req.query.search));
+    const location = normalize(getQueryValue(req.query.location));
+    const category = normalize(getQueryValue(req.query.category));
+    const escapeRegex = (value) =>
+      String(value).trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    const query = { status: "approved", isActive: true };
+
+    if (search) {
+      const s = escapeRegex(search);
+      query.$or = [
+        { serviceName: { $regex: s, $options: "i" } },
+        { vendorName: { $regex: s, $options: "i" } },
+        { description: { $regex: s, $options: "i" } },
+        { location: { $regex: s, $options: "i" } },
+        { category: { $regex: s, $options: "i" } },
+      ];
+    }
+    if (location && location.toLowerCase() !== "all") {
+      query.location = { $regex: escapeRegex(location), $options: "i" };
+    }
+    if (category && category.toLowerCase() !== "all") {
+      query.category = { $regex: `^${escapeRegex(category)}$`, $options: "i" };
+    }
+
+    const sortDirection = String(sort).toLowerCase();
+    const sortOption =
+      sortDirection === "asc" ||
+      sortDirection === "low" ||
+      sortDirection === "priceasc" ||
+      sortDirection === "low-to-high"
+        ? { price: 1 }
+        : sortDirection === "desc" ||
+            sortDirection === "high" ||
+            sortDirection === "pricedesc" ||
+            sortDirection === "high-to-low"
+          ? { price: -1 }
+          : { createdAt: -1 };
+
+    const result = await servicesCollection.find(query).sort(sortOption).toArray();
+    res.send(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ message: "Failed to fetch services" });
+  }
+});
+
 // service count 
 app.get('/services/count', async (req, res) => {
   const query = {};
@@ -110,6 +164,7 @@ app.patch('/services/:id', async (req, res) => {
   res.send(result);
 })
 
+// Delete service by id
 app.delete('/services/:id',async(req,res)=>{
   const {id} = req.params;
   const result = await servicesCollection.deleteOne({_id: new ObjectId(id)})
