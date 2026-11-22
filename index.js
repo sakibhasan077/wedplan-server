@@ -343,6 +343,27 @@ app.patch('/bookings/:id/status', async (req, res) => {
   res.send({ message: "Booking status updated successfully" });
 });
 
+// dashboard admin overview api 
+app.get("/api/admin/overview", async (req, res) => {
+  try {
+    const [totalUsers, totalVendors, totalCustomers,
+          totalServices, pendingServices, totalTransactions] = await Promise.all([
+      userCollection.countDocuments(),
+      userCollection.countDocuments({ role: "vendor" }),
+      userCollection.countDocuments({ role: "customer" }),
+      servicesCollection.countDocuments(),
+      servicesCollection.countDocuments({ status: "pending" }),
+      paymentCollection.countDocuments(),
+    ]);
+
+    res.json({ totalUsers, totalVendors, totalCustomers,
+              totalServices, pendingServices, totalTransactions });
+  } catch (error) {
+  console.log("ERROR:", error);
+  res.status(500).json({ message: "Failed to load overview" });
+}
+});
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
