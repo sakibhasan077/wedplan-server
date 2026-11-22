@@ -329,6 +329,20 @@ app.delete('/bookings/:id/cancel', async (req, res) => {
 
 });
 
+// update booking status
+app.patch('/bookings/:id/status', async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send({ message: "Invalid booking ID" });
+  }
+  const result = await bookingCollection.updateOne({ _id: new ObjectId(id) }, { $set: { status } });
+  if (result.modifiedCount === 0) {
+    return res.status(404).send({ message: "Booking not found" });
+  }
+  res.send({ message: "Booking status updated successfully" });
+});
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
