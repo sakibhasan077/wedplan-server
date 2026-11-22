@@ -32,6 +32,7 @@ const db = connectedClient.db("wedplan");
 const servicesCollection = db.collection("services");
 const userCollection = db.collection("user");
 const paymentCollection = db.collection("payment");
+const bookingCollection = db.collection("booking");
 
 app.get('/', (req, res) => {
   res.send({status: "success", message: "wedplan api is running"});
@@ -254,6 +255,35 @@ app.post('/payment/checkout', async (req, res) => {
 // get all payments
 app.get('/payments/history', async (req, res) => {
   const result = await paymentCollection.find({}).sort({ createdAt: -1 }).toArray();
+  res.send(result);
+})
+
+// Booking related api 
+app.post('/bookings', async (req, res) => {
+  const bookingData = req.body;
+  const {serviceId} = bookingData;
+  if (!ObjectId.isValid(serviceId)) {
+  return res.status(400).send({
+    message: "Invalid service ID",
+  });
+  }
+  const service = await servicesCollection.findOne({_id: new ObjectId(serviceId)});
+  if (!service) {
+    return res.status(404).send({
+      message: "Service not found",
+    });
+  }
+  if(service.status !== "approved" || !service.isActive) {
+    return res.status(400).send({
+      message: "Service is not available for booking",
+    });
+  }
+  const data = {
+    status: "pending",
+    createdAt: new Date(),
+    ...bookingData,
+  }
+  const result = await bookingCollection.insertOne(data);
   res.send(result);
 })
 
