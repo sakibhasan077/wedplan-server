@@ -364,6 +364,51 @@ app.get("/api/admin/overview", async (req, res) => {
 }
 });
 
+// dashboard vendor overview api
+// dashboard vendor overview api
+app.get("/api/vendor/overview", async (req, res) => {
+  try {
+    // TODO: JWT যোগ হলে এটা হবে const vendorId = req.user.id;
+    const { vendorId } = req.query;
+
+    if (!vendorId || !ObjectId.isValid(vendorId)) {
+      return res.status(400).json({ message: "Valid vendorId is required" });
+    }
+
+    const [
+      totalServices,
+      activeServices,
+      pendingRequests,
+      acceptedBookings,
+      vendor,
+    ] = await Promise.all([
+      servicesCollection.countDocuments({ vendorId }),
+      servicesCollection.countDocuments({
+        vendorId,
+        status: "approved",
+        isActive: true,
+      }),
+      bookingCollection.countDocuments({ vendorId, status: "Pending" }),
+      bookingCollection.countDocuments({ vendorId, status: "Accepted" }),
+      userCollection.findOne(
+        { _id: new ObjectId(vendorId) },
+        { projection: { subscriptionPlan: 1 } }
+      ),
+    ]);
+
+    res.json({
+      totalServices,
+      activeServices,
+      pendingRequests,
+      acceptedBookings,
+      subscriptionPlan: vendor?.subscriptionPlan || "free",
+    });
+  } catch (error) {
+    console.log("ERROR:", error);
+    res.status(500).json({ message: "Failed to load vendor overview" });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
