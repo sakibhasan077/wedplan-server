@@ -287,6 +287,20 @@ app.post('/bookings', async (req, res) => {
   res.send(result);
 })
 
+// get booking 
+app.get(`/bookings/bookings/my`, async (req, res) => {
+  const {customerId} = req.query; 
+  if(!customerId) {
+    return res.status(400).send({message: "customerId is required"});
+  }
+  if(!ObjectId.isValid(customerId)) {
+    return res.status(400).send({message: "Invalid customerId"});
+  }
+  const result = await bookingCollection.find({customerId}).sort({ createdAt: -1 }).toArray();
+  res.send(result);
+
+})
+
 
 
 app.listen(port, () => {
