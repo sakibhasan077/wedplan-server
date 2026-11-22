@@ -301,7 +301,20 @@ app.get(`/bookings/bookings/my`, async (req, res) => {
 
 })
 
+// cancel booking
+app.delete('/bookings/:id/cancel', async (req, res) => {
+  const { id } = req.params;
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send({ message: "Invalid booking ID" });
+  }
+  const result = await bookingCollection.deleteOne({ _id: new ObjectId(id) });
+  if (result.deletedCount === 0) {
+    return res.status(404).send({ message: "Booking not found" });
+  }
+  res.send({ message: "Booking canceled successfully" });
 
+
+});
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
