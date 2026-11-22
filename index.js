@@ -33,10 +33,41 @@ const servicesCollection = db.collection("services");
 const userCollection = db.collection("user");
 const paymentCollection = db.collection("payment");
 const bookingCollection = db.collection("booking");
+const sessionCollection = db.collection("session");
 
 app.get('/', (req, res) => {
   res.send({status: "success", message: "wedplan api is running"});
 });
+
+// Verify Token API
+const verifyToken = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    res.status(401).send({ message: 'Unauthorized' });
+    return;
+  }
+
+  const token = authHeader.split(' ')[1];
+  if (!token) {
+    res.status(401).send({ message: 'Unauthorized' });
+    return;
+  }
+
+  const session = await sessionCollection.findOne({ token });
+  if (!session) {
+    res.status(401).send({ message: 'Unauthorized' });
+    return;
+  }
+
+  const user = await userCollection.findOne({ _id: new ObjectId(session.userId) });
+  if (!user) {
+    res.status(401).send({ message: 'Unauthorized' });
+    return;
+  }
+
+  req.user = user;
+  next()
+}
 
 // Services API
 //get all service data for admin 
@@ -150,9 +181,13 @@ app.get("/services/:id",async(req,res)=>{
   res.send(result);
 })
 
-// Get services by vendor id
-app.get('/services/vendor/:vendorId', async (req, res) => {
+// Get services by vendor id (secure)
+app.get('/services/vendor/:vendorId', verifyToken , async (req, res) => {
   const{vendorId} = req.params;
+  const services = await servicesCollection.findOne({vendorId});
+  if(services.vendorId !== req.user._id.toString() && req.user.role !== "admin") {
+    return res.status(403).send({message: "Forbidden: You are not authorized to access this resource."});
+  }
   const result = await servicesCollection.find({vendorId}).sort({ createdAt: -1 }).toArray();
   res.send(result);
 })
