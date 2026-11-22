@@ -279,9 +279,9 @@ app.post('/bookings', async (req, res) => {
     });
   }
   const data = {
-    status: "pending",
-    createdAt: new Date(),
     ...bookingData,
+    status: "Pending",
+    createdAt: new Date(),
   }
   const result = await bookingCollection.insertOne(data);
   res.send(result);
@@ -388,7 +388,10 @@ app.get("/api/vendor/overview", async (req, res) => {
         status: "approved",
         isActive: true,
       }),
-      bookingCollection.countDocuments({ vendorId, status: "Pending" }),
+      bookingCollection.countDocuments({
+        vendorId,
+        status: { $in: ["Pending", "pending"] },
+      }),
       bookingCollection.countDocuments({ vendorId, status: "Accepted" }),
       userCollection.findOne(
         { _id: new ObjectId(vendorId) },
@@ -406,6 +409,34 @@ app.get("/api/vendor/overview", async (req, res) => {
   } catch (error) {
     console.log("ERROR:", error);
     res.status(500).json({ message: "Failed to load vendor overview" });
+  }
+});
+
+// dashboard customer overview api
+app.get("/api/customer/overview", async (req, res) => {
+  try {
+    // TODO: JWT যোগ হলে এটা হবে const customerId = req.user.id;
+    const { customerId } = req.query;
+
+    if (!customerId) {
+      return res.status(400).json({ message: "customerId is required" });
+    }
+
+    const [totalBookings, pendingBookings, acceptedBookings, rejectedBookings] =
+      await Promise.all([
+        bookingCollection.countDocuments({ customerId }),
+        bookingCollection.countDocuments({
+          customerId,
+          status: { $in: ["Pending", "pending"] },
+        }),
+        bookingCollection.countDocuments({ customerId, status: "Accepted" }),
+        bookingCollection.countDocuments({ customerId, status: "Rejected" }),
+      ]);
+
+    res.json({ totalBookings, pendingBookings, acceptedBookings, rejectedBookings });
+  } catch (error) {
+    console.log("ERROR:", error);
+    res.status(500).json({ message: "Failed to load customer overview" });
   }
 });
 
