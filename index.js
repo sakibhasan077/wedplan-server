@@ -69,9 +69,42 @@ const verifyToken = async (req, res, next) => {
   next()
 }
 
+// must call this middleware after verifyToken
+const verifyCustomer = async (req, res, next) => {
+  if (req.user.role !== 'customer') {
+    res.status(403).send({ message: 'Forbidden' });
+    return;
+  }
+  if (req.user.isBlocked) {
+    return res.status(403).json({ message: "Forbidden: your account is blocked" });
+  }
+  next();
+}
+const verifyVendor = async (req, res, next) => {
+  if (req.user.role !== 'vendor') {
+    res.status(403).send({ message: 'Forbidden' });
+    return;
+  }
+  if (req.user.isBlocked) {
+    return res.status(403).json({ message: "Forbidden: your account is blocked" });
+  }
+
+  next();
+}
+const verifyAdmin = async (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    res.status(403).send({ message: 'Forbidden' });
+    return;
+  }
+  if (req.user.isBlocked) {
+    return res.status(403).json({ message: "Forbidden: your account is blocked" });
+  }
+  next();
+}
+
 // Services API
-//get all service data for admin 
-app.get('/admin/services', async (req, res) => {
+//get all service data for admin (done)
+app.get('/admin/services',verifyToken, verifyAdmin, async (req, res) => {
   const query = {};
   if(req.query.status){
     query.status = req.query.status;
@@ -95,8 +128,8 @@ app.get('/admin/services', async (req, res) => {
   const result = await servicesCollection.find(query).sort({ createdAt: -1 }).toArray();
   res.send(result);
 })
-// Post a new service
-app.post('/services', async (req, res) =>{
+// Post a new service(done)
+app.post('/services',verifyToken,verifyVendor, async (req, res) =>{
   const service = req.body;
   const serviceData = {
     status: "pending",
@@ -107,7 +140,7 @@ app.post('/services', async (req, res) =>{
   res.send(result);
 }) 
 
-// get all services for browse services page
+// get all services for browse services page (done)
 app.get("/services/browse", async (req, res) => {
   try {
     const getQueryValue = (value) => Array.isArray(value) ? value[0] : value;
@@ -161,8 +194,8 @@ app.get("/services/browse", async (req, res) => {
   }
 });
 
-// service count 
-app.get('/services/count', async (req, res) => {
+// service count (done)
+app.get('/services/count', verifyToken, verifyVendor, async (req, res) => {
   const query = {};
   if(req.query.vendorId){
     query.vendorId = req.query.vendorId;
@@ -171,8 +204,8 @@ app.get('/services/count', async (req, res) => {
   res.send({count: count});
 });
 
-// Get Service Data by id
-app.get("/services/:id",async(req,res)=>{
+// Get Service Data by id(DONE)
+app.get("/services/:id", verifyToken, async(req,res)=>{
    const { id } = req.params;
   const result = await servicesCollection.findOne({
     _id: new ObjectId(id)
@@ -182,7 +215,7 @@ app.get("/services/:id",async(req,res)=>{
 })
 
 // Get services by vendor id (secure)
-app.get('/services/vendor/:vendorId', verifyToken , async (req, res) => {
+app.get('/services/vendor/:vendorId', verifyToken , verifyVendor, async (req, res) => {
   const{vendorId} = req.params;
   const services = await servicesCollection.findOne({vendorId});
   if(services.vendorId !== req.user._id.toString() && req.user.role !== "admin") {
@@ -192,23 +225,38 @@ app.get('/services/vendor/:vendorId', verifyToken , async (req, res) => {
   res.send(result);
 })
 
-//Update service status
-app.patch('/services/:id', async (req, res) => {
+//Update service status by vendor(done)
+app.patch('/services/:id', verifyToken, verifyVendor,  async (req, res) => {
   const {id} = req.params;
   const updateData = req.body;
   const result = await servicesCollection.updateOne({_id: new ObjectId(id)}, {$set: updateData});
   res.send(result);
 })
 
-// Delete service by id
-app.delete('/services/:id',async(req,res)=>{
+// Delete service by id by vendor(done)
+app.delete('/services/:id',verifyToken,verifyVendor,async(req,res)=>{
+  const {id} = req.params;
+  const result = await servicesCollection.deleteOne({_id: new ObjectId(id)})
+  res.send(result)
+})
+
+//Update service status by admin (done)
+app.patch('/services/:id/admin', verifyToken, verifyAdmin,  async (req, res) => {
+  const {id} = req.params;
+  const updateData = req.body;
+  const result = await servicesCollection.updateOne({_id: new ObjectId(id)}, {$set: updateData});
+  res.send(result);
+})
+
+// Delete service by id by admin (done)
+app.delete('/services/:id/admin',verifyToken,verifyAdmin,async(req,res)=>{
   const {id} = req.params;
   const result = await servicesCollection.deleteOne({_id: new ObjectId(id)})
   res.send(result)
 })
 // User Collection 
 
-app.get("/users",async(req,res)=>{
+app.get("/users",verifyToken,verifyAdmin,async(req,res)=>{
   const query =  {}
   if(req.query.role){
     query.role = req.query.role;
@@ -224,15 +272,19 @@ app.get("/users",async(req,res)=>{
 })
 
 // update user profile
-app.patch('/users/profile/:id', async (req, res) => {
+app.patch('/users/profile/:id',verifyToken, async (req, res) => {
   const {id} = req.params;
+  const user = await userCollection.findOne({_id: new ObjectId(id)});
+  if(req.user._id.toString() !== user._id.toString()) {
+    return res.status(403).send({message: "Forbidden: You are not authorized to update this profile."});
+  }
   const updateData = req.body;
   const result = await userCollection.updateOne({_id: new ObjectId(id)}, {$set: updateData});
   res.send(result); 
 })
 
 // update user IsBlocked status
-app.patch('/users/:id', async (req, res) => {
+app.patch('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
   const {id} = req.params;
   const updateData = req.body;
   const result = await userCollection.updateOne({_id: new ObjectId(id)}, {$set: updateData});
@@ -240,14 +292,14 @@ app.patch('/users/:id', async (req, res) => {
 })
 
 // Get user by id
-app.get('/users/brows-details/:id', async (req, res) => {
+app.get('/users/brows-details/:id', verifyToken, verifyAdmin, async (req, res) => {
   const {id} = req.params;
   const result = await userCollection.findOne({_id: new ObjectId(id)});
   res.send(result);
 })
 
 // Payment API
-app.post('/payment/checkout', async (req, res) => {
+app.post('/payment/checkout',verifyToken, verifyVendor, async (req, res) => {
   const {sessionId} = req.body;
   if(!sessionId){
     return res.status(400).send({ error: "Session ID is required" });
@@ -288,13 +340,13 @@ app.post('/payment/checkout', async (req, res) => {
 });
 
 // get all payments
-app.get('/payments/history', async (req, res) => {
+app.get('/payments/history', verifyToken, verifyAdmin, async (req, res) => {
   const result = await paymentCollection.find({}).sort({ createdAt: -1 }).toArray();
   res.send(result);
 })
 
 // Booking related api 
-app.post('/bookings', async (req, res) => {
+app.post('/bookings', verifyToken, async (req, res) => {
   const bookingData = req.body;
   const {serviceId} = bookingData;
   if (!ObjectId.isValid(serviceId)) {
@@ -323,7 +375,7 @@ app.post('/bookings', async (req, res) => {
 })
 
 // get booking 
-app.get(`/bookings/bookings/my`, async (req, res) => {
+app.get(`/bookings/bookings/my`, verifyToken,verifyCustomer, async (req, res) => {
   const {customerId} = req.query; 
   if(!customerId) {
     return res.status(400).send({message: "customerId is required"});
@@ -336,7 +388,7 @@ app.get(`/bookings/bookings/my`, async (req, res) => {
 
 })
 
-app.get(`/bookings/bookings/vendor`, async (req, res) => {
+app.get(`/bookings/bookings/vendor`, verifyToken, verifyVendor, async (req, res) => {
   const {vendorId} = req.query; 
   if(!vendorId) {
     return res.status(400).send({message: "vendorId is required"});
@@ -350,7 +402,7 @@ app.get(`/bookings/bookings/vendor`, async (req, res) => {
 })
 
 // cancel booking
-app.delete('/bookings/:id/cancel', async (req, res) => {
+app.delete('/bookings/:id/cancel', verifyToken, verifyCustomer, async (req, res) => {
   const { id } = req.params;
   if (!ObjectId.isValid(id)) {
     return res.status(400).send({ message: "Invalid booking ID" });
@@ -365,7 +417,7 @@ app.delete('/bookings/:id/cancel', async (req, res) => {
 });
 
 // update booking status
-app.patch('/bookings/:id/status', async (req, res) => {
+app.patch('/bookings/:id/status', verifyToken, verifyVendor, async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   if (!ObjectId.isValid(id)) {
@@ -379,7 +431,7 @@ app.patch('/bookings/:id/status', async (req, res) => {
 });
 
 // dashboard admin overview api 
-app.get("/api/admin/overview", async (req, res) => {
+app.get("/api/admin/overview", verifyToken, verifyAdmin, async (req, res) => {
   try {
     const [totalUsers, totalVendors, totalCustomers,
           totalServices, pendingServices, totalTransactions] = await Promise.all([
@@ -401,7 +453,7 @@ app.get("/api/admin/overview", async (req, res) => {
 
 // dashboard vendor overview api
 // dashboard vendor overview api
-app.get("/api/vendor/overview", async (req, res) => {
+app.get("/api/vendor/overview", verifyToken, verifyVendor, async (req, res) => {
   try {
     // TODO: JWT যোগ হলে এটা হবে const vendorId = req.user.id;
     const { vendorId } = req.query;
@@ -448,7 +500,7 @@ app.get("/api/vendor/overview", async (req, res) => {
 });
 
 // dashboard customer overview api
-app.get("/api/customer/overview", async (req, res) => {
+app.get("/api/customer/overview", verifyToken, verifyCustomer, async (req, res) => {
   try {
     // TODO: JWT যোগ হলে এটা হবে const customerId = req.user.id;
     const { customerId } = req.query;
