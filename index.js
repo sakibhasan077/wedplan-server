@@ -301,6 +301,19 @@ app.get(`/bookings/bookings/my`, async (req, res) => {
 
 })
 
+app.get(`/bookings/bookings/vendor`, async (req, res) => {
+  const {vendorId} = req.query; 
+  if(!vendorId) {
+    return res.status(400).send({message: "vendorId is required"});
+  }
+  if(!ObjectId.isValid(vendorId)) {
+    return res.status(400).send({message: "Invalid vendorId"});
+  }
+  const result = await bookingCollection.find({vendorId}).sort({ createdAt: -1 }).toArray();
+  res.send(result);
+
+})
+
 // cancel booking
 app.delete('/bookings/:id/cancel', async (req, res) => {
   const { id } = req.params;
