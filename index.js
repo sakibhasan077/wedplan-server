@@ -216,13 +216,12 @@ app.get("/services/:id", async(req,res)=>{
 
 // Get services by vendor id (secure)
 app.get('/services/vendor/:vendorId', verifyToken , verifyVendor, async (req, res) => {
-  const{vendorId} = req.params;
-  const services = await servicesCollection.findOne({vendorId});
-  if(services.vendorId !== req.user._id.toString() && req.user.role !== "admin") {
-    return res.status(403).send({message: "Forbidden: You are not authorized to access this resource."});
+  const { vendorId } = req.params;
+  if (vendorId !== req.user._id.toString()) {
+    return res.status(403).json({ message: "Forbidden: You are not authorized to access this resource." });
   }
   const result = await servicesCollection.find({vendorId}).sort({ createdAt: -1 }).toArray();
-  res.send(result);
+  res.json(result);
 })
 
 //Update service status by vendor(done)
