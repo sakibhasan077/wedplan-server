@@ -205,7 +205,7 @@ app.get('/services/count', verifyToken, verifyVendor, async (req, res) => {
 });
 
 // Get Service Data by id(DONE)
-app.get("/services/:id", verifyToken, async(req,res)=>{
+app.get("/services/:id", async(req,res)=>{
    const { id } = req.params;
   const result = await servicesCollection.findOne({
     _id: new ObjectId(id)
